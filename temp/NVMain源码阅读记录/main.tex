@@ -1,0 +1,318 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  My documentation report
+%  Objetive: Explain what I did and how, so someone can continue with the investigation
+%
+% Important note:
+% Chapter heading images should have a 2:1 width:height ratio,
+% e.g. 920px width and 460px height.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[11pt,fleqn]{book} % Default font size and left-justified equations
+
+\usepackage[top=3cm,bottom=3cm,left=3.2cm,right=3.2cm,headsep=10pt,letterpaper]{geometry} % Page margins
+
+\usepackage{xcolor,lipsum} % Required for specifying colors by name
+\definecolor{ocre}{RGB}{51,102,0} 
+\definecolor{lightgray}{RGB}{229,229,229} 
+% Font Settings
+\usepackage{avant} % Use the Avantgarde font for headings
+%\usepackage{times} % Use the Times font for headings
+\usepackage{mathptmx} % Use the Adobe Times Roman as the default text font together with math symbols from the Sym­bol, Chancery and Com­puter Modern fonts
+
+\usepackage{microtype} % Slightly tweak font spacing for aesthetics
+% \usepackage[utf8]{inputenc} % Required for including letters with accents
+% \usepackage[T1]{fontenc} % Use 8-bit encoding that has 256 glyphs
+\usepackage[UTF8]{ctex}
+\usepackage{subfigure}
+\usepackage{filemod}
+% MATHS PACKAGE
+\usepackage{amsmath,tikz}
+\usetikzlibrary{matrix}
+\newcommand*{\horzbar}{\rule[0.05ex]{2.5ex}{0.5pt}}
+\usepackage{calc}
+
+% VERBATIM PACKAGE
+\usepackage{verbatim}
+
+% Bibliography
+\usepackage[style=alphabetic,sorting=nyt,sortcites=true,autopunct=true,babel=hyphen,hyperref=true,abbreviate=false,backref=true,backend=biber]{biblatex}
+\addbibresource{bibliography.bib} % BibTeX bibliography file
+\defbibheading{bibempty}{}
+
+\input{structure} % Insert the commands.tex file which contains the majority of the structure behind the template
+
+\begin{document}
+
+\let\cleardoublepage\clearpage
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\begingroup
+\thispagestyle{empty}
+\includegraphics[width=0.23\textwidth]{HUST.png}
+\includegraphics[width=0.28\textwidth]{WNLO.png}
+\includegraphics[width=0.42\textwidth]{DSAL.jpg}
+%\AddToShipoutPicture*{\put(0,0){\includegraphics[scale=1.25]{v}}} % Image background
+\centering
+\vspace*{5cm}
+\par\normalfont\fontsize{32}{32}\sffamily\selectfont
+\textbf{NVMain: A User-Friendly Architectural-Level\\ Main Memory Simulator for Emerging (Non-)volatile Memories}\\
+{\LARGE }\par % Book title
+\vspace*{1cm}
+{\Huge Qing Yang\\dioxygen.github.io}\par % Author name
+\endgroup
+
+%----------------------------------------------------------------------------------------
+%	COPYRIGHT PAGE
+%----------------------------------------------------------------------------------------
+
+\newpage
+~\vfill
+\thispagestyle{empty}
+
+%\noindent Copyright \copyright\ 2014 Andrea Hidalgo\\ % Copyright notice
+
+\noindent Huazhong University of Science \& Technology\\
+
+\noindent Wuhan National Laboratory for Optoelectronics\\
+
+\noindent Data Storage and Application Lab\\
+
+\noindent \textit{Last updated } % Printing/edition date
+\filemodprint{\jobname}
+
+%----------------------------------------------------------------------------------------
+%	TABLE OF CONTENTS
+%----------------------------------------------------------------------------------------
+
+\chapterimage{pano-5.jpg} % heading image
+
+\pagestyle{empty} % No headers
+
+\renewcommand\contentsname{目录}
+\renewcommand{\bibname}{Bibliographie}
+\tableofcontents% Print the table of contents itself
+
+%\cleardoublepage % Forces the first chapter to start on an odd page so it's on the right
+
+\pagestyle{fancy} % Print headers again
+
+%----------------------------------------------------------------------------------------
+%	CHAPTER 1
+%----------------------------------------------------------------------------------------
+
+\chapterimage{pano-5.jpg} % Chapter heading image
+
+\chapter{NVMain简介}
+
+\section{Motivation}\index{Motivation}
+
+  \vspace{1em}
+
+ Le modèle linéaire mixte a été mis en oeuvre dès les années 1950, essentiellement dans
+le domaine de la génétique animale (réf.       Henderson$^{\textbf{[5]}}$). Il n’a toutefois
+connu une utilisation plus générale qu’au cours des années 1990, en relation avec le
+développement de nouvelles procédures de calcul dans le cadre des logiciels statistiques. L’utilisation du modèle linéaire mixte soulève, par rapport aux modèles classiques d’analyse de la variance, un certain nombre de difficultés particulières, tant en ce qui concerne l’estimation des différents paramètres que la réalisation des tests d’hypothèses. Des informations peuvent être trouvées à ce sujet
+dans les articles de Littell [2002], McLean et al. [1991], et Piepho et al. [2003], et dans les
+livres de Demidenko [2004], McCulloch et Searle [2001], 
+
+  \vspace{2em}
+
+\section{Modèle linéaire mixte gaussien à K facteurs aléatoires}
+
+  \vspace{1em}
+  
+  On appelle modèle mixte un modèle statistique dans lequel on considère à la fois des facteurs à effets fixes (qui vont intervenir au niveau de la moyenne du modèle) et des facteurs à effets aléatoires (qui vont intervenir au niveau de la variance du modèle). Un modèle est dit mixte lorsqu’il y a au moins un facteur de chaque nature. Dans le cadre de ce rapport, nous ne considérons
+que des modèles linéaires gaussiens mixtes unidimensionnel à K facteurs aléatoires indépendants plus une résiduelle, mais la notion de modèle mixte se rencontre également dans d’autres contextes, notamment dans le modèle linéaire généralisé.
+
+ \vspace{1em}
+ 
+ Un modèle linéaire à effets mixtes est un modèle (réf. Laird et Ware$^{\textbf{[2]}}$) qui satisfait:
+
+\begin{equation}
+\fbox{$
+Y=X\beta+\sum_{k=1}^{K} Z_k \gamma_k+\epsilon
+$}
+\end{equation}
+
+\vspace{1em}
+
+avec $(\gamma_k)_{k=1,...,K}$ le kième vecteur aléatoire et $\epsilon$ le vecteur des résidus.
+
+  \vspace{1em} 
+  
+$\bullet\quad \gamma_k=\left[
+  \begin{array}{ c }
+     \gamma_{k1}  \\
+     \vdots   \\
+     \gamma_{k q_k}  \\ 
+  \end{array} \right]_{q_k,1}$  \quad où \: $\gamma_{k1},..., \gamma_{k q_k}\hookrightarrow\mathcal{N}(0,\sigma_k^2)$ \: et indépendantes les unes des autres.
+
+\vspace{1em}
+  
+  Le vecteur aléatoire $\gamma_k$ est gaussien puisque pour tout $c=(c_1, ... ,c_{q_k})'\in \mathbb{R}^{q_k}$ \\ la variable
+  $\sum_{i=1}^{q_k} c_i\gamma_{k i}= c'\gamma_k $ est une variable réelle gaussienne. $\gamma_k$ est donc normalement distribué,\\ 
+  $\gamma_k\hookrightarrow\mathcal{N}(0,\Sigma_k)$ de matrice de covariance $\Sigma_k=\sigma_k^2 \: I_{q_k}$ 
+  
+\vspace{1em}
+
+$\bullet \quad \epsilon=\left[
+  \begin{array}{ c }
+     \epsilon_{1}  \\
+     \vdots   \\
+     \epsilon_{n}  \\ 
+  \end{array} \right]_{n,1}$  \quad où \: $\epsilon_{1},..., \epsilon_{n}\hookrightarrow\mathcal{N}(0,\sigma_{\epsilon}^2)$ \: et indépendantes les unes des autres.
+
+\vspace{1em}
+
+
+$\bullet \quad X=\left[
+  \begin{array}{ c c c c }
+     |  & | & & | \\
+     1 & x_1 & ... & x_p  \\
+     |  & | & & |
+  \end{array} \right]_{n,p+1}$ \quad $\beta=\left[
+  \begin{array}{ c }
+     \alpha  \\
+     \beta_1   \\
+      \vdots  \\
+      \beta_p  
+  \end{array} \right]_{p+1,1} $
+  
+  \vspace{1em}
+
+$X \in \mathcal{M}_{n,p+1}(\mathbb{R})$ est la matrice formée d'une colonne $1_n$ et de variables explicatives fixées $x_j$.\\ 
+$\beta$ est le vecteur de $\mathbb{R}^{p+1}$ qui réunit la constante de régression $\alpha$ et les coefficients $\beta_j$  des variables à effets fixes. Tandis que les matrices $Z_k$ dans $\mathcal{M}_{n,q_k}(\mathbb{R})$ et les vecteurs $\gamma_k$ de $\mathbb{R}^{q_k}$ jouent un rôle pour les composantes aléatoires du modèle.
+
+  \vspace{1em}
+
+\begin{proposition}[Distribution du vecteur à expliquer]
+
+Y est normalement distribué de moyenne  $\mu=X\beta$ et de matrice de covariance $V=\sum_{k=1}^{K} Z_k \sigma_k^2 Z_k'+\sigma^2_{\epsilon} I_{n}$  supposée symétrique, définie positive. 
+
+
+\end{proposition}
+
+\vspace{1em}
+
+\textit{\textbf{Demonstration.}}
+
+\vspace{0.5em}
+
+\textit{Le vecteur $Y=(y_1,...,y_n)'$ est un vecteur gaussien de $\mathbb{R}^{n}$ puisque pour tout $c=(c_1, ... ,c_{n})'\in \mathbb{R}^{n}$ la variable $\sum_{i=1}^{n}c_i y_i=c'Y=c'(X\beta+\sum_{k=1}^{K} Z_k \gamma_k+\epsilon)=c'X\beta+c'\sum_{k=1}^{K} Z_k \gamma_k+c'\epsilon$ est une variable réelle gaussienne, car $c'X\beta$ est un réel et $c'\sum_{k=1}^{K} Z_k \gamma_k+c'\epsilon$ est une somme de variables réelles gaussiennes.}
+
+\vspace{1em}
+
+\textit{$Y$ est de moyenne $\mu$ et de matrice de covariance $V$ tel que:}
+
+\vspace{1em}
+
+\textit{$\mu=\mathbb{E}[Y] = \mathbb{E}[X\beta]+\sum_{k=1}^{K}\mathbb{E}[Z_k \gamma_k]+\mathbb{E}[\epsilon]  = X\beta$ \quad  (car $X$ est déterministe)}
+
+\vspace{1em}
+
+\begin{align*}
+V&=Var(Y) \\
+&= Var(X\beta)+ \sum_{k=1}^{K} Var(Z_k \gamma_k)+Var(\epsilon) \\
+&= \sum_{k=1}^{K} Z_k\:Var(\gamma_k)\:Z_k'+\sigma^2_{\epsilon} I_{n}\\
+&=\sum_{k=1}^{K} Z_k \sigma_k^2 Z_k'+\sigma^2_{\epsilon} I_{n} \quad\quad\quad \blacksquare
+\end{align*}   
+
+%\cleardoublepage % Forces the first chapter to start on an odd page so it's on the right
+
+\pagestyle{fancy} % Print headers again
+%----------------------------------------------------------------------------------------
+%	CHAPTER 2
+%----------------------------------------------------------------------------------------
+
+\chapterimage{pano-5.jpg} % Chapter heading image
+
+\chapter{NVMain使用方法}
+\section{NVMain单独模拟}\index{NVMain单独运行}
+
+  \vspace{1em}
+
+  \vspace{2em}
+
+\section{NVMain与gem5混合模拟}
+
+  \vspace{1em}
+
+
+%\cleardoublepage % Forces the first chapter to start on an odd page so it's on the right
+
+\pagestyle{fancy} % Print headers again
+%----------------------------------------------------------------------------------------
+%	CHAPTER 3
+%----------------------------------------------------------------------------------------
+
+\chapterimage{pano-5.jpg} % Chapter heading image
+
+\chapter{NVMain源码分析}
+\section{NVMObject}\index{NVMObject}
+
+  \vspace{1em}
+
+  \vspace{2em}
+
+\section{traceMain}
+
+  \vspace{1em}
+
+  \vspace{2em}
+
+\section{EventQueue}
+  % * EventQueue.h&.cpp，里面涉及到Event、EventQueue和GlobalEventQueue三个对象。其中event成员函数除了`void  Event::SetRecipient( NVMObject *r )`外都比较简单，其核心代码如下：
+  % ```
+  % std::vector<NVMObject_hook *>& children =  r->GetParent( )->GetTrampoline( )->GetChildren( );
+  % std::vector<NVMObject_hook *>::iterator it;
+  % NVMObject_hook *hook =  NULL;
+  % for( it =  children.begin(); it !=  children.end(); it++ )
+  % {
+  %   if( (*it)->GetTrampoline() == r )
+  %   {
+  %     hook = (*it);
+  %     break;
+  %   }
+  % }
+  % ```
+  % 看看上面这段操作时干什么的？最后hook是Parent的children成员中包含指向r信息的一个NVMObject_hook指针。
+  % `void  EventQueue::InsertEvent( Event *event, ncycle_t  when, int  priority )`在最后的插入事件的函数中，这个nextEventCycle到底是什么意思？这种插入方法感觉不太对劲，主要是感觉这个nextEventCycle 有什么意义不清楚。**对劲了，nextEventCycle 就是记录了开始时钟周期数最小的事件的时钟周期**
+  % ```
+  % if( when < nextEventCycle )
+  % {
+  %   nextEventCycle = when;
+  % }
+  % ```
+  % 看完整个InsertEvent系列函数之后，原来插入的方法是通过提供的信息构造一个Event对象出来，在加上时间和优先级插入到一个map中，这个map对每个时钟周期都存在一条优先级List，插入时根据事件的时钟周期信息找到对应的List，然后再根据优先级大小关系插入到List中的恰当位置（优先级越高会插入到List越靠前的位置）（注意这里的`NVMObject_hook *recipient`，看看到底这个钩子是怎么样发挥作用的）
+  % * InsertCallback函数会组装出一个Event对象，然后调用最终的InsertEvent（即是：InsertEvent( event, when, priority );）将回调事件（type被设置为EventCallback）插入到EventQueue中。需要注意的是对于构造一个回调事件不需要设置Event的req成员，但是需要额外设置回调方法
+  % *去除事件时RemoveEvent需要根据时钟周期信息和事件本身在map中定位到需要去除的事件，这件事情本身并不复杂，需要注意的时候删除元素可能会导致List甚至整个map为空的情况，下面更新nextEventCycle又是为了什么？nextEventCycle到底是什么意思？
+  % ```
+  % if( eventMap.empty() )
+  % {
+  %   nextEventCycle =  std::numeric_limits<uint64_t>::max( );
+  % }
+  % else
+  % {
+  %   nextEventCycle =  eventMap.begin()->first;
+  % }
+  % ```
+  % 注意一下Loop函数，感觉实际上就是在向前推进currentCycle，从Loop进入Process函数时，条件`nextEventCycle == currentCycle`都是得到保证了
+  % 在Process函数中按优先级顺序处理map开始时钟为nextEventCycle对应的eventList（或者说从前向后从eventList中取出event）。根据event的类型，recipient指向的NVMObject执行对应的操作（Cycle、RequestComplete和GetCallback），然后更改lastEventCycle的值为nextEventCycle，以记录上一个处理eventList的开始时钟周期，并将nextEventCycle指向map中的下一个非空值。同时需要额外注意Cycle的参数是**nextEventCycle - lastEventCycle**，这是什么意思？总的来说Loop向前推进currentCycle，然后Process将所有开始时钟周期为currentCycle的事件按照其类型执行相应的操作，最后nextEventCycle后移指向最近的下一个EventList（也会去掉已经完成指向的EventList）
+  % GlobalEventQueue有成员变量`std::map<EventQueue *, double> eventQueues;`，`void  GlobalEventQueue::AddSystem( NVMain *subSystem, Config *config )`将NVMain的事件队列（EventQueue）（NVMain对象的EventQueue成员继承自NVMObject）加到`std::map<EventQueue *, double> eventQueues;`中，其中第二参数为从配置文件中获得的CLK参数
+  % `ncycle_t  GlobalEventQueue::GetNextEvent( EventQueue **eq )`函数在eventQueues指向的多个EventQueue中找出下一个事件的时钟周期数最小的那个EventQueue，其将这个最小的时钟周期数作为返回值（需要稍微注意一下，由于内存系统和CPU采用了不同的时钟频率，因此这里返回的时钟周期数是乘了放大因子转换成CPU的时钟周期数了），同时让eq指向那个具有最小下一个事件开始的时钟周期数的EventQueue
+ % `void  GlobalEventQueue::Cycle( ncycle_t  steps )`有点类似Loop函数，先GetNextEvent找到包含最早的下一个事件的EventQueue，然后这里大致是先使用localQueueSteps推进包含最早下一个事件的EventQueue，然后使用globalQueueSteps推进其他剩余EventQueue，但是这里存在很大的困惑。感觉最终的效果是都推进到`ncycle_t nextEvent =  GetNextEvent( &nextEventQueue );`了，**这里到底是为何什么？**
+  %`void  GlobalEventQueue::Sync( )`将eventQueues中所有的EventQueue对象进行同步，也就是将其中包含的所有时钟周期数小于（**有可能会出现大于的情况吗？**）GlobalEventQueue的currentCycle矫正到内存时钟后的值的EventQueue对象向前推进到相同的时钟周期（GlobalEventQueue的currentCycle矫正到内存时钟后的值）
+%
+  \vspace{1em}
+
+  \vspace{2em}
+
+  \end{document}
