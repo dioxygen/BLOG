@@ -229,7 +229,7 @@ if( when < nextEventCycle )
 ```
 看完整个InsertEvent系列函数之后，原来插入的方法是通过提供的信息构造一个Event对象出来，在加上时间和优先级插入到一个map中，这个map对每个时钟周期都存在一条优先级List，插入时根据事件的时钟周期信息找到对应的List，然后再根据优先级大小关系插入到List中的恰当位置（优先级越高会插入到List越靠前的位置）（注意这里的`NVMObject_hook *recipient`，看看到底这个钩子是怎么样发挥作用的）
 * InsertCallback函数会组装出一个Event对象，然后调用最终的InsertEvent（即是：InsertEvent( event, when, priority );）将回调事件（type被设置为EventCallback）插入到EventQueue中。需要注意的是对于构造一个回调事件不需要设置Event的req成员，但是需要额外设置回调方法
-*去除事件时RemoveEvent需要根据时钟周期信息和事件本身在map中定位到需要去除的事件，这件事情本身并不复杂，需要注意的时候删除元素可能会导致List甚至整个map为空的情况，下面更新nextEventCycle又是为了什么？nextEventCycle到底是什么意思？
+* 去除事件时RemoveEvent需要根据时钟周期信息和事件本身在map中定位到需要去除的事件，这件事情本身并不复杂，需要注意的时候删除元素可能会导致List甚至整个map为空的情况，下面更新nextEventCycle又是为了什么？nextEventCycle到底是什么意思？
 ```
 if( eventMap.empty() )
 {
@@ -289,7 +289,9 @@ memoryControllers[i] =
 MemoryControllerFactory::CreateNewController( channelConfig[i]->GetString( "MEM_CTL" ) );
 ```
 **这条路还没分析完，现在先转到memorycontroller去**
-
+* 先从最简单的FCFS调度算法开始，NVMain和FCFS会调用MemoryController中的一些函数可以从这些地方作为入口
+    * `std::cout << StatName( ) << " capacity is " << ((p->ROWS * p->COLS * p->tBURST * p->RATE * p->BusWidth * p->BANKS * p->RANKS) / (8*1024*1024)) << " MB." << std::endl;`从这些参数中计算出内存容量，有点怀疑tBURST和RATE的乘积就是存储数据的芯片个数
+    * UseRefresh在DRAM的配置中均设置为ture，在NVM的配置中均配置为false。NVMain同时提供模拟新型DRAM和各种NVM的能力，因此在控制器上实现了刷新操作
 
 
 
