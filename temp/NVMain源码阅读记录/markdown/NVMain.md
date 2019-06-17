@@ -288,12 +288,15 @@ NVMain在SetConfig函数中开始配置channels个memoryControllers，包含对c
 memoryControllers[i] =
 MemoryControllerFactory::CreateNewController( channelConfig[i]->GetString( "MEM_CTL" ) );
 ```
-**这条路还没分析完，现在先转到memorycontroller去**
+**这条路还没分析完，现在先转到memorycontroller去（同时是不是也可以看一下内存控制器是如何对读写请求进行重排序的，也可以从崩溃一致性的角度分析一下）**
 * 先从最简单的FCFS调度算法开始，NVMain和FCFS会调用MemoryController中的一些函数可以从这些地方作为入口
     * `std::cout << StatName( ) << " capacity is " << ((p->ROWS * p->COLS * p->tBURST * p->RATE * p->BusWidth * p->BANKS * p->RANKS) / (8*1024*1024)) << " MB." << std::endl;`从这些参数中计算出内存容量，有点怀疑tBURST和RATE的乘积就是存储数据的芯片个数
-    * UseRefresh在DRAM的配置中均设置为ture，在NVM的配置中均配置为false。NVMain同时提供模拟新型DRAM和各种NVM的能力，因此在控制器上实现了刷新操作
-
-
+    * UseRefresh在DRAM的配置中均设置为ture，在NVM的配置中均配置为false。NVMain同时提供模拟新型(主要是是指3D DRAM和CPU之间通过TSV连接)DRAM和各种NVM的能力，因此在控制器上实现了刷新操作
+    * NVMain存在的一个问题可能（至少目前我觉得是一个缺陷）就是一个控制器只能有一个通道，因此最后测试输出的结果中控制器的编号和通道的编号是一样的
+    * 里面提到了两种队列，分别是transactionQueues和commandQueues，不同的调度算法中设置transactionQueues为1或者2，FCFS中设置为1  
+    * subarray的意义到底是什么，很多时候配置文件中导致实际上一个bank中的subarray数就是1，但是在根据请求的地址解码commandQueues的编号时存在几种模式，其中一种具体到以subarray对commandQueues进行编号
+    * FCFS在bool FCFS::IssueCommand( NVMainRequest *request )中调用了void MemoryController::Enqueue( ncounter_t queueNum, NVMainRequest *request )，而在Enqueue的是实现与transactionQueues、commandQueues和EventQueue三者均相关
+    * FCFS的Cycle函数中调用了FindOldestReadyRequest，现在有点搞不懂的是为什么这个FindOldestReadyRequest函数中找到了最早准备好的请求之后为什么就从事务链表中把它摘下来了 
 
 
 
