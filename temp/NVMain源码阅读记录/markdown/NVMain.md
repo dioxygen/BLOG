@@ -249,7 +249,7 @@ GlobalEventQueue有成员变量`std::map<EventQueue *, double> eventQueues;`，`
 到这里EventQueue就看完了，现在重新回到traceMain.cpp
 - - -
 到主流程中来的时候再看看AddSystem函数，把NVMain对应的EventQueue插入到GlobalEventQueue的eventQueues中了，然后对应的时钟频率设置成了配置文件中的`CLK*1000000`。然后`nvmain->SetConfig( config, "defaultMemory", true );`中创建了内存控制器。然后类似的一级一级地再SetConfig中创建了Interconnect、rank、bank、subarray（最后在subarray中加入了EnduranceModelFactory和CreateNewDataEncoder），还有几个比较重要地步骤是simInterface（单独运行NVMain时被设置为NullInterface）的设置，TraceReaderFactory（这个在配置文件中均配置为NVMainTrace），然后用从命令中获取到的trace文件路径来配置trace。用命令行中的模拟时钟周期数来配置simulateCycles（会根据CPU时钟和内存时钟的差异将该值进行修正）。嘿嘿，激动人心的时刻就要到来了，广告之后马上回来>>>>>>不！开玩笑的。
-首先时判断当前时钟周期是否到达命令行设置的时钟周期数限制`while( currentCycle <= simulateCycles || simulateCycles ==  0 )`，然后开始从NVMain负载配置文件中读取下一条traceline（失败则尝试drain，这里需要说明一下只有所有子类drain的返回值均为true的时候，这个父类的drain的返回值才会为true），然后就是利用读取到的traceline构造request，根据该条traceline的开始时钟周期时间向前推进globalEventQueue（或者直接说增加currentCycle），然后`GetChild( )->IsIssuable( request )`试探当前内存控制器是否可以接受下一条命令，不行就继续向前推进globalEventQueue，可以的话就增加`outstandingRequests`，然后将访存请求发送下面的对象`GetChild( )->IssueCommand( request );`。**这里没有看到显示地设置request的cycle，不知道是怎么回事?**
+首先时判断当前时钟周期是否到达命令行设置的时钟周期数限制`while( currentCycle <= simulateCycles || simulateCycles ==  0 )`，然后开始从NVMain负载配置文件中读取下一条traceline（失败则尝试drain，这里需要说明一下只有所有子类drain的返回值均为true的时候，这个父类的drain的返回值才会为true），然后就是利用读取到的traceline构造request，根据该条traceline的开始时钟周期时间向前推进globalEventQueue（或者直接说增加currentCycle），然后`GetChild( )->IsIssuable( request )`试探当前内存控制器是否可以接受下一条命令，不行就继续向前推进globalEventQueue，可以的话就增加`outstandingRequests`，然后将访存请求发送下面的对象`GetChild( )->IssueCommand( request );`。这个IssueCommand函数估计是把request转换成event然后加入到事件队列中去了**这里没有看到显示的设置request的cycle，不知道是怎么回事?**
 在NVMObject.h中CalculateStats被声明为virtual：
 ```
 virtual  void  CalculateStats( );
@@ -329,4 +329,13 @@ GetChild( )->IssueCommand( request );
 - - -
 还有outstandingRequests是如何在命令完成之后减少的，这也需要追下去一下
 - - -
+nvmain中的cycle函数体内是空的？？？为什么？
+- - -
 src/MemoryController.h&.cpp以及衍生出的各种排队算法，这里以MemControl/FCFS/FCFS.h&.cpp为例进行分析
+- - -
+* IssueCommand函数和IsIssuable函数专题分析
+    * 首先这两个函数调用的模式基本上是`GetChild( )->IsIssuable( request )`、`GetChild( )->IssueCommand( request )`，而`GetChild()`函数返回类型是`NVMObject_hook *`因此IsIssuable和IssueCommand的大致逻辑都是先试探下层模块是否准备好可以接受上层发送请求，具体下面会转到NVMObject中的NVMObject_hook进行分析
+    * 首先从顶层的traceMain模块中分析：
+        * traceMain中读取负载文件的一行构造出一个request之后将当前全局事件队列向前推进到该负载行的发射时钟，然后向下（NVMain）试探是否可以发送请求，可以就向下发送该请求，同时增加未完成的请求数，不行就继续向前推进全局事件队列一个时钟后继续试探
+    * NVMObject_hook模块实现了不同NVMObject的父子指向关系：
+        * 其中IsIssuable函数很简单`return trampoline->IsIssuable( req, reason )`直接返回子类的IsIssuable结果，IssueCommand则稍微麻烦一点，核心还是rv = trampoline->IssueCommand( req )，但是会在发射命令前后调用先发射hook和后发射hook
