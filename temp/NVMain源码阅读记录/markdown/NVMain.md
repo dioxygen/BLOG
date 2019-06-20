@@ -326,6 +326,7 @@ MemoryControllerFactory::CreateNewController( channelConfig[i]->GetString( "MEM_
 while( !GetChild( )->IsIssuable( request ) )
 GetChild( )->IssueCommand( request );
 这两条线应该差不多
+另外一个需要思考的问题是request显示地给出了请求的地址，对于请求数据的大小要确定一下，应该是64B
 - - -
 还有outstandingRequests是如何在命令完成之后减少的，这也需要追下去一下
 - - -
@@ -336,6 +337,7 @@ src/MemoryController.h&.cpp以及衍生出的各种排队算法，这里以MemCo
 * IssueCommand函数和IsIssuable函数专题分析
     * 首先这两个函数调用的模式基本上是`GetChild( )->IsIssuable( request )`、`GetChild( )->IssueCommand( request )`，而`GetChild()`函数返回类型是`NVMObject_hook *`因此IsIssuable和IssueCommand的大致逻辑都是先试探下层模块是否准备好可以接受上层发送请求，具体下面会转到NVMObject中的NVMObject_hook进行分析
     * 首先从顶层的traceMain模块中分析：
-        * traceMain中读取负载文件的一行构造出一个request之后将当前全局事件队列向前推进到该负载行的发射时钟，然后向下（NVMain）试探是否可以发送请求，可以就向下发送该请求，同时增加未完成的请求数，不行就继续向前推进全局事件队列一个时钟后继续试探
+        * traceMain中读取负载文件的一行构造出一个request之后将当前全局事件队列向前推进到该负载行的发射时钟，然后向下（NVMain）试探是否可以发送请求，可以就向下发送该请求，同时增加未完成的请求数，不行就继续向前推进全局事件队列一个时钟后继续试探，这里tracemian的执行和globalEventQueue的依赖度非常高
     * NVMObject_hook模块实现了不同NVMObject的父子指向关系：
-        * 其中IsIssuable函数很简单`return trampoline->IsIssuable( req, reason )`直接返回子类的IsIssuable结果，IssueCommand则稍微麻烦一点，核心还是rv = trampoline->IssueCommand( req )，但是会在发射命令前后调用先发射hook和后发射hook
+        * 其中IsIssuable函数很简单`return trampoline->IsIssuable( req, reason )`直接返回子类的IsIssuable结果，IssueCommand则稍微麻烦一点，核心还是`rv = trampoline->IssueCommand( req )`但是会在发射命令前后调用先发射hook和后发射hook
+    * NVMain模块则要复杂一点，因为这里开始要处理预取了（一个问题是为什么要在RequestComplete函数里面prefetchBuffer.push_back( request )，而且只有这里有prefetchBuffer的）
