@@ -64,7 +64,7 @@ void FlipNWrite::SetConfig( Config *config, bool /*createChildren*/ )
     fpSize = config->GetValue( "FlipNWriteGranularity" );
 
     /* Some default size if the parameter is not specified */
-    if( fpSize == -1 )
+    if( fpSize == -1 )//未配置的变量输出warning信息后被设置位-1
         fpSize = 32; 
 }
 
@@ -156,7 +156,7 @@ ncycle_t FlipNWrite::Write( NVMainRequest *request )
 
     wordSize = p->BusWidth;
     wordSize *= p->tBURST * p->RATE;
-    wordSize /= 8;
+    wordSize /= 8;//cacheline的字节数
 
     rowSize = p->COLS * wordSize;
     rowPartitions = ( rowSize * 8 ) / fpSize;

@@ -930,7 +930,7 @@ ncycle_t SubArray::WriteCellData( NVMainRequest *request )
 {
     writeIterationStarts.clear( );
     uint32_t *rawData = reinterpret_cast<uint32_t*>(request->data.rawData);
-    unsigned int memoryWordSize = static_cast<unsigned int>(p->tBURST * p->RATE * p->BusWidth);
+    unsigned int memoryWordSize = static_cast<unsigned int>(p->tBURST * p->RATE * p->BusWidth);//结果是64B，传统cache line的大小
     unsigned int writeBytes32 = memoryWordSize / 32;
 
     if( p->UniformWrites )
@@ -957,7 +957,7 @@ ncycle_t SubArray::WriteCellData( NVMainRequest *request )
         else
         {
             /* Assume uniformly random data if we don't have data. */
-            writeCount0 = 256;
+            writeCount0 = 256;//这里有可能是之前ignoredata，然后就假定数据一半为0一半为1
             writeCount1 = 256;
         }
 
