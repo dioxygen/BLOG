@@ -2,6 +2,7 @@
 #### 目标：
 >**理解gem5与NVMain之间是如何通信的，还有nvmain具体是如何配置NVM的**
 
+Memory Systems Cache, DRAM, Disk这边书第13章详细介绍了内存控制器的内容
 [gem5+NVMain混合编译qpush无报错(+parsec负载)](https://www.jianshu.com/p/851c9a45098e)
 [nvmain wiki](https://web.archive.org/web/20180322072751/http://wiki.nvmain.org/index.php)
 [nvsim main page](https://web.archive.org/web/20160408161957/http://nvsim.org/wiki/index.php?title=Main_Page)
@@ -36,7 +37,7 @@ path to nvmain
 oxygen@oxygen-virtual-machine:~/workspace/nvmain$ ./nvmain.fast  -h
 Usage: nvmain CONFIG_FILE TRACE_FILE CYCLES [PARAM=value ...]
 ```
-可以看到运行NVMain的时候使用-h参数可以知道NVMain的使用方法，这里特别提到了可以选择主动指定参数的方法，因此当需要开启FlipNWrite的时候不需要每次去NVM的config文件中修改，直接在运行的时候指定数据编码方式就可以了，但是**gem5和NVMain一起运行的时候好像不太方便指定NVMain中的配置变量，之后再试试**
+可以看到运行NVMain的时候使用-h参数可以知道NVMain的使用方法，这里特别提到了可以选择主动指定参数的方法，因此当需要开启FlipNWrite的时候不需要每次去NVM的config文件中修改，直接在运行的时候指定数据编码方式就可以了，但是**gem5和NVMain一起运行的时候好像不太方便指定NVMain中的配置变量，之后再试试**->**已解决这个问题：结合nvmain/Simulators/gem5/NVMainMemory.py和nvmain/Simulators/gem5/nvmain_mem.cc后发现gem5和NVMain一起运行时，制定NVMain的参数可以采用--NVMain-param1(,param2,...)=value1(,value2,...)，也可以分开指定多个参数的值，用逗号的方式简洁一点，另外注意到可以对NVMain设置warmup选项，这将会设置NVMainWarmUp为true**
 悄悄提一下并不需要用-h参数，只要输入的参数个数小于4个就会输出这个提示
 ```
     if( argc < 4 )
@@ -297,7 +298,7 @@ MemoryControllerFactory::CreateNewController( channelConfig[i]->GetString( "MEM_
     * subarray的意义到底是什么，很多时候配置文件中导致实际上一个bank中的subarray数就是1，但是在根据请求的地址解码commandQueues的编号时存在几种模式，其中一种具体到以subarray对commandQueues进行编号
     * FCFS在bool FCFS::IssueCommand( NVMainRequest *request )中调用了void MemoryController::Enqueue( ncounter_t queueNum, NVMainRequest *request )，而在Enqueue的是实现与transactionQueues、commandQueues和EventQueue三者均相关
     * FCFS的Cycle函数中调用了FindOldestReadyRequest，现在有点搞不懂的是为什么这个FindOldestReadyRequest函数中找到了最早准备好的请求之后为什么就从事务链表中把它摘下来了 
-
+    * ClosePage是什么东西？ if( rank == mRank && bank == mBank && row == mRow && subarray == mSubArray )条件位真则判断位row buffer命中，是不是说明每个subarray有独立的row buffer
 
 
 
@@ -334,10 +335,31 @@ nvmain中的cycle函数体内是空的？？？为什么？
 - - -
 src/MemoryController.h&.cpp以及衍生出的各种排队算法，这里以MemControl/FCFS/FCFS.h&.cpp为例进行分析
 - - -
+每一级的RequestComplete函数处理逻辑是什么？为什么request->owner是自己的时候就可以delete request 
+- - - 
 * IssueCommand函数和IsIssuable函数专题分析
     * 首先这两个函数调用的模式基本上是`GetChild( )->IsIssuable( request )`、`GetChild( )->IssueCommand( request )`，而`GetChild()`函数返回类型是`NVMObject_hook *`因此IsIssuable和IssueCommand的大致逻辑都是先试探下层模块是否准备好可以接受上层发送请求，具体下面会转到NVMObject中的NVMObject_hook进行分析
     * 首先从顶层的traceMain模块中分析：
         * traceMain中读取负载文件的一行构造出一个request之后将当前全局事件队列向前推进到该负载行的发射时钟，然后向下（NVMain）试探是否可以发送请求，可以就向下发送该请求，同时增加未完成的请求数，不行就继续向前推进全局事件队列一个时钟后继续试探，这里tracemian的执行和globalEventQueue的依赖度非常高
     * NVMObject_hook模块实现了不同NVMObject的父子指向关系：
         * 其中IsIssuable函数很简单`return trampoline->IsIssuable( req, reason )`直接返回子类的IsIssuable结果，IssueCommand则稍微麻烦一点，核心还是`rv = trampoline->IssueCommand( req )`但是会在发射命令前后调用先发射hook和后发射hook
-    * NVMain模块则要复杂一点，因为这里开始要处理预取了（一个问题是为什么要在RequestComplete函数里面prefetchBuffer.push_back( request )，而且只有这里有prefetchBuffer的）
+    * NVMain模块则要复杂一点，因为这里开始要处理预取了（一个问题是为什么要在RequestComplete函数里面prefetchBuffer.push_back( request )，而且只有这里有prefetchBuffer的压入操作）
+    * MemoryController模块因为要处理**刷新**，因此里面有很多比较复杂的刷新处理逻辑，setconfig函数先创建了InterConnect，然后设置有关commandqueues，然后就是大量的有关刷新的操作，NVM并不需要刷新，这里先不看关于刷新的部分
+    * OffChipBus与Interconnect（实际上没有实现任何功能）模块，OffChipBus的功能比较简单，基本上就是把command继续下传，特殊一点的是它提供了CalculateIOPower函数计算读写一个比特的能耗（但奇怪的是这个函数并没有被调用）
+    * StandardRank与Rank（实际上有没有实现任何有价值的功能）模块总体上也是把command继续下传
+    * SubArray模块（终于轮到你啦）的setconfig函数有别与其他，当createChildren为真时，会创建CreateEnduranceModel与CreateNewDataEncoder。重点看一下这个模块的write函数和RequestComplete函数，然后自顶向上想一下下发额请求是怎么完成的，这里还要结合FlipNWrite看看write到底怎么实现翻转的标志位又是到底存储在那里的。IssueCommand根据request的类型在该模块最终完成实际的操作。WriteCellData这个函数也很重要。
+    * **逐级看完代码的主要部分后一些觉得疑惑的地方，request会导致event，RequestComplete函数中req->owner == this则就在该模块中进行处理，否则上传给上一级return GetParent( )->RequestComplete( req );eventqueue到底是怎么推动的。还有芯片的时序信号限制有点复杂，但是这个部分其实不需要很深入的理解，可以适当结合芯片的命令看一下。还有读写请求下发给subarray后到底是怎么处理的，subarray有没有存储写请求的数据，MLC的两个比特又是怎么存储的？**
+    * 在subarray中，写操作的延迟和能耗等的计算需要request的新旧数据，然而在写操作时并没有看到真正保存写操作，这里非常疑惑，那么下一次对该地址执行写操作，旧数据如何获得呢？问了下徐洁师兄这里，他说实际存储在gem5的内存中，可以把NVMain当成一个中间层
+
+* NVMain与gem5之间的接口
+    * SimInterface/Gem5Interface/Gem5Interface模块，NVMain运行的时钟和CPU不一样，那么他们怎么连接起来呢？里面主要实现了以下函数：
+        * GetInstructionCount：通过statsList函数捕获committedInsts的统计信息
+        * GetCacheMisses：根据所处级别捕获num_mem_refs或者overall_misses的统计信息
+        * GetCacheHits：通过计算上一级和本级之间GetCacheMisses的差值获得
+    * Simulators/gem5/nvmain_mem模块：这个和traceMain实现的功能具有很大的相似性，`class NVMainMemory : public AbstractMemory, public NVM::NVMObject`
+        * SetRequestData设置了NVMainRequest的一些信息，特别是oldata字段和data字段
+        * m_request_map：std::map<NVM::NVMainRequest *, NVMainMemoryRequest *> m_request_map
+        * recvAtomic和recvTimingReq里面分别会调用下一级的IssueAtomic和IssueCommand
+        * RequestComplete：
+        * tick：里面调用了m_nvmainGlobalEventQueue->Cycle( stepCycles )
+        
