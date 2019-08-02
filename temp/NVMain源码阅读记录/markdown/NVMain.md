@@ -362,4 +362,134 @@ src/MemoryController.h&.cpp以及衍生出的各种排队算法，这里以MemCo
         * recvAtomic和recvTimingReq里面分别会调用下一级的IssueAtomic和IssueCommand
         * RequestComplete：
         * tick：里面调用了m_nvmainGlobalEventQueue->Cycle( stepCycles )
-        
+
+
+
+
+- - -
+#### 关于NVMain（和gem5）中的编译构建工具Scons
+* NVMain有三种编译选项：debug,fast,prof[关于AddOption的说明](https://scons.org/doc/2.2.0/HTML/scons-user/a11700.html)
+```
+#
+#  Setup command line options for different build types
+#
+AddOption('--verbose', dest='verbose', action='store_true',
+          help='Show full compiler command line')
+AddOption('--build-type', dest='build_type', type='choice',
+          choices=["debug","fast","prof"],
+          help='Type of build. Determines compiler flags')
+```
+* 三种不同的编译选项具体的编译参数：
+```
+if build_type == None or build_type == "fast":
+    env.Append(CCFLAGS='-O3')  #O3优化选项
+    env.Append(CCFLAGS='-Werror')
+    env.Append(CCFLAGS='-Wall')
+    env.Append(CCFLAGS='-Wextra')
+    env.Append(CCFLAGS='-Woverloaded-virtual')
+    env.Append(CCFLAGS='-fPIC')
+    env.Append(CCFLAGS='-std=c++0x')
+    env.Append(CCFLAGS='-DNDEBUG')
+    env['OBJSUFFIX'] = '.fo'
+    build_type = "fast"
+elif build_type == "debug":
+    env.Append(CCFLAGS='-O0')
+    env.Append(CCFLAGS='-ggdb3')
+    env.Append(CCFLAGS='-Werror')
+    env.Append(CCFLAGS='-Wall')
+    env.Append(CCFLAGS='-Wextra')
+    env.Append(CCFLAGS='-Woverloaded-virtual')
+    env.Append(CCFLAGS='-fPIC')
+    env.Append(CCFLAGS='-std=c++0x')
+    env['OBJSUFFIX'] = '.do'
+elif build_type == "prof":
+    env.Append(CCFLAGS='-O0')
+    env.Append(CCFLAGS='-ggdb3')
+    env.Append(CCFLAGS='-pg')
+    env.Append(CCFLAGS='-Werror')
+    env.Append(CCFLAGS='-Wall')
+    env.Append(CCFLAGS='-Wextra')
+    env.Append(CCFLAGS='-Woverloaded-virtual')
+    env.Append(CCFLAGS='-fPIC')
+    env.Append(CCFLAGS='-std=c++0x')
+    env.Append(CCFLAGS='-DNDEBUG')
+    env.Append(LINKFLAGS='-pg')
+    env['OBJSUFFIX'] = '.po'
+```
+* 将项目中的源代码递归加入到src_list中
+```
+#
+#  All the sources for the project will be appended to this
+#  list. At the end of the script, the program will be built
+#  as prog_name from this list. This can be customized to add
+#  different sources to different source lists.
+#
+src_list = []
+prog_name = 'nvmain'
+
+
+#
+#  Defines a function used in hierarchical SConscripts that
+#  adds to the master source list. 
+#
+def NVMainSource(src):
+    src_list.append(File(src))
+Export('NVMainSource'
+```
+* 后面有一部分代码是为了更漂亮的输出编译过程信息的，和实现的功能关系不大，主要是python的语法，先跳过
+* 真正递归执行nvmain各级目录及子目录下的SConscript脚本过程
+```
+#  Walk the current directory looking for SConscripts in each
+#  subdirectory defining source files for that subdirectory.
+#
+obj_dir = joinpath(base_dir, env['BUILDROOT'])
+for root, dirs, files in os.walk(base_dir, topdown=True):
+    if root.startswith(obj_dir):#这里是因为可能之前已经执行过scons，因此发现遍历到basedir/build的时候跳过
+        # Don't check the build folder if it already exists from a prior build
+        continue
+
+    if 'SConscript' in files:
+        build_dir = joinpath(env['BUILDROOT'], root[len(base_dir) + 1:])#被编译的源码会被写到basedir/build/在源代码中的相对路径，+1应该是为了去掉'/'符号
+        SConscript(joinpath(root, 'SConscript'), variant_dir=build_dir)#[对variant_dir参数的说明,大致来讲就是会将目录中的文件以及子目录拷贝到目标中执行构建](https://bitbucket.org/scons/scons/wiki/SConscript)
+```
+* 设置了编译最终的输出名称，例如之前Scons的选项选择的是fast，那么最终的编译输出的可执行文件名称final_bin就会是nvmain.fast
+```
+#
+#  Build the name of the final output binary
+#
+final_bin = "%s.%s" % (prog_name, build_type)
+
+NVMainSourceType(final_bin, "Program")
+```
+* Program实现对src_list中的源文件进行编译，最终输出名为final_bin的结果
+```
+#
+#  Build each of the programs with the corresponding source list.
+#
+env.Program(final_bin, src_list)
+```
+* **这两个函数没有看懂**
+```
+def strip_build_path(path, env):
+    path = str(path)
+    variant_base = env['BUILDROOT'] + os.path.sep
+    if path.startswith(variant_base):
+        path = path[len(variant_base):]
+    elif path.startswith('build/'):
+        path = path[6:]
+    return path
+
+#
+#  Define output strings for different stages of the build. Add 
+#  additional build steps here, e.g., QT_MOCCOMSTR, M4COMSTR, etc.
+#
+if GetOption("verbose") != True:
+    MakeAction = Action
+    env['CCCOMSTR']        = PrettyPrint("CC", "Compiling")
+    env['CXXCOMSTR']       = PrettyPrint("CXX", "Compiling")
+    env['ASCOMSTR']        = PrettyPrint("AS", "Assembling")
+    env['ARCOMSTR']        = PrettyPrint("AR", "Archiving", False)
+    env['LINKCOMSTR']      = PrettyPrint("LINK", "Linking", False)
+    env['RANLIBCOMSTR']    = PrettyPrint("RANLIB", "Indexing Archive", False)
+    Export('MakeAction')
+```

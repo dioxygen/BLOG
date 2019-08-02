@@ -11,7 +11,11 @@ FALRU::~FALRU析构函数
 FALRU::tagsInit：
 FALRU::accessBlock访问cache
 
-
+[PARSEC X86](https://www.mail-archive.com/gem5-users@gem5.org/msg05725.html)
+[PARSEC SE MOD](https://www.mail-archive.com/gem5-users@gem5.org/msg10473.html)
+编译SPEC CPU2006 将gcc和g++降级到4.8.5后成功：https://blog.csdn.net/qq_33160790/article/details/80464473
+gem5与NVMain执行SPEC CPU 2006中的bzip2负载：
+./build/X86/gem5.opt --redirect-stdout --outdir=./benchmark/reslut/bzip2 ./configs/example/myse.py --cpu-type=DerivO3CPU --caches --l1d_size=16kB --l1i_size=16kB --l2cache --l2_size=4MB --l1d_assoc=2 --l1i_assoc=2 --l2_assoc=16 --mem-type=NVMainMemory --mem-size=4GB --nvmain-config=../nvmain/Config/PCM_ISSCC_2012_4GB.config --nvmain-DataEncoder,IgnoreData=FlipNWrite,false -b bzip2 -I 50000000
 
 
 ### gem5 blog
